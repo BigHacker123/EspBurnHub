@@ -67,7 +67,6 @@ esp.NewCham = function(properties)
     for i,v in next, properties or {} do
         newCham[i] = v
     end
-    print("new")
 
     return newCham
 end
@@ -97,9 +96,14 @@ esp.TeamCheck = function(v)
     return true
 end
 
+esp.GetEquippedTool = function(v)
+    return (v.Character:FindFirstChildOfClass("Tool") and tostring(v.Character:FindFirstChildOfClass("Tool"))) or "Hands"
+end
+
 esp.NewPlayer = function(v)
     esp.players[v] = {
         name = esp.NewDrawing("Text", {Color = Color3fromRGB(255, 255, 255), Outline = true, Center = true, Size = 13, Font = 2}),
+        filledbox = esp.NewDrawing("Square", {Color = Color3fromRGB(255, 255, 255), Thickness = 1, Filled = true}),
         boxOutline = esp.NewDrawing("Square", {Color = Color3fromRGB(0, 0, 0), Thickness = 3}),
         box = esp.NewDrawing("Square", {Color = Color3fromRGB(255, 255, 255), Thickness = 1}),
         healthBarOutline = esp.NewDrawing("Line", {Color = Color3fromRGB(0, 0, 0), Thickness = 3}),
@@ -107,6 +111,7 @@ esp.NewPlayer = function(v)
         healthText = esp.NewDrawing("Text", {Color = Color3fromRGB(255, 255, 255), Outline = true, Center = true, Size = 13, Font = 2}),
         distance = esp.NewDrawing("Text", {Color = Color3fromRGB(255, 255, 255), Outline = true, Center = true, Size = 13, Font = 2}),
         viewAngle = esp.NewDrawing("Line", {Color = Color3fromRGB(255, 255, 255), Thickness = 1}),
+        weapon = esp.NewDrawing("Text", {Color = Color3fromRGB(255, 255, 255), Outline = true, Center = true, Size = 13, Font = 2}),
         cham = esp.NewCham({FillColor = esp.settings_chams.fill_color, OutlineColor = esp.settings_chams.outline_color, FillTransparency = esp.settings_chams.fill_transparency, OutlineTransparency = esp.settings_chams.outline_transparency})
     }
 end
@@ -121,7 +126,7 @@ plrs.ChildAdded:Connect(function(v)
     esp.NewPlayer(v)
 end)
 
-plrs.ChildRemoved:Connect(function(v)
+plrs.PlayerRemoving:Connect(function(v)
     for i2,v2 in pairs(esp.players[v]) do
         pcall(function()
             v2:Remove()
@@ -141,11 +146,11 @@ ESP_Loop = rs.RenderStepped:Connect(function()
             local head = i.Character.Head
 
             local Vector, onScreen = camera:WorldToViewportPoint(i.Character.HumanoidRootPart.Position)
-    
+
             local Size = (camera:WorldToViewportPoint(hrp.Position - Vector3new(0, 3, 0)).Y - camera:WorldToViewportPoint(hrp.Position + Vector3new(0, 2.6, 0)).Y) / 2
             local BoxSize = Vector2new(mathfloor(Size * 1.5), mathfloor(Size * 1.9))
             local BoxPos = Vector2new(mathfloor(Vector.X - Size * 1.5 / 2), mathfloor(Vector.Y - Size * 1.6 / 2))
-    
+
             local BottomOffset = BoxSize.Y + BoxPos.Y + 1
 
             if onScreen and esp.settings_chams.enabled then
@@ -200,11 +205,21 @@ ESP_Loop = rs.RenderStepped:Connect(function()
                     v.distance.Visible = false
                 end
 
+                if esp.settings.filledbox.enabled then
+                    v.filledbox.Size = BoxSize + Vector2.new(-2, -2)
+                    v.filledbox.Position = BoxPos + Vector2.new(1, 1)
+                    v.filledbox.Color = esp.settings.filledbox.color
+                    v.filledbox.Transparency = esp.settings.filledbox.transparency
+                    v.filledbox.Visible = true
+                else
+                    v.filledbox.Visible = false
+                end
+
                 if esp.settings.box.enabled then
                     v.boxOutline.Size = BoxSize
                     v.boxOutline.Position = BoxPos
                     v.boxOutline.Visible = esp.settings.box.outline
-    
+
                     v.box.Size = BoxSize
                     v.box.Position = BoxPos
                     v.box.Color = esp.settings.box.color
@@ -231,7 +246,7 @@ ESP_Loop = rs.RenderStepped:Connect(function()
                 end
 
                 if esp.settings.healthtext.enabled then
-                    v.healthText.Text = tostring(mathfloor((hum.Health / hum.MaxHealth) * 100 + 0.5))
+                    v.healthText.Text = tostring(mathfloor(hum.Health))
                     v.healthText.Position = Vector2new((BoxPos.X - 20), (BoxPos.Y + BoxSize.Y - 1 * BoxSize.Y) -1)
                     v.healthText.Color = esp.settings.healthtext.color
                     v.healthText.Outline = esp.settings.healthtext.outline
@@ -246,52 +261,74 @@ ESP_Loop = rs.RenderStepped:Connect(function()
 
                 if esp.settings.viewangle.enabled and head and head.CFrame then
                     v.viewAngle.From = Vector2new(camera:worldToViewportPoint(head.CFrame.p).X, camera:worldToViewportPoint(head.CFrame.p).Y)
-                    v.viewAngle.To = Vector2new(camera:worldToViewportPoint((head.CFrame + (head.CFrame.lookVector * 10)).p).X, camera:worldToViewportPoint((head.CFrame + (head.CFrame.lookVector * 10)).p).Y)
+                    v.viewAngle.To = Vector2new(camera:worldToViewportPoint((head.CFrame + (head.CFrame.lookVector * esp.settings.viewangle.size)).p).X, camera:worldToViewportPoint((head.CFrame + (head.CFrame.lookVector * esp.settings.viewangle.size)).p).Y)
                     v.viewAngle.Color = esp.settings.viewangle.color
                     v.viewAngle.Visible = true
                 else
                     v.viewAngle.Visible = false
                 end
 
+                if esp.settings.weapon.enabled then
+                    v.weapon.Visible = true
+                    v.weapon.Position = Vector2new(BoxSize.X + BoxPos.X + v.weapon.TextBounds.X / 2 + 3, BoxPos.Y - 3)
+                    v.weapon.Outline = esp.settings.name.outline
+                    v.weapon.Color = esp.settings.name.color
+
+                    v.weapon.Font = esp.font
+                    v.weapon.Size = esp.fontsize
+
+                    v.weapon.Text = esp.GetEquippedTool(i)
+                else
+                    v.weapon.Visible = false
+                end
+
                 if esp.teamcheck then
                     if esp.TeamCheck(i) then
                         v.name.Visible = esp.settings.name.enabled
                         v.box.Visible = esp.settings.box.enabled
+                        v.filledbox.Visible = esp.settings.box.enabled
                         v.healthBar.Visible = esp.settings.healthbar.enabled
                         v.healthText.Visible = esp.settings.healthtext.enabled
                         v.distance.Visible = esp.settings.distance.enabled
                         v.viewAngle.Visible = esp.settings.viewangle.enabled
+                        v.weapon.Visible = esp.settings.weapon.enabled
                     else
                         v.name.Visible = false
                         v.boxOutline.Visible = false
                         v.box.Visible = false
+                        v.filledbox.Visible = false
                         v.healthBarOutline.Visible = false
                         v.healthBar.Visible = false
                         v.healthText.Visible = false
                         v.distance.Visible = false
                         v.viewAngle.Visible = false
+                        v.weapon.Visible = false
                     end
                 end
             else
                 v.name.Visible = false
                 v.boxOutline.Visible = false
                 v.box.Visible = false
+                v.filledbox.Visible = false
                 v.healthBarOutline.Visible = false
                 v.healthBar.Visible = false
                 v.healthText.Visible = false
                 v.distance.Visible = false
                 v.viewAngle.Visible = false
+                v.weapon.Visible = false
             end
         else
             v.name.Visible = false
             v.boxOutline.Visible = false
             v.box.Visible = false
+            v.filledbox.Visible = false
             v.healthBarOutline.Visible = false
             v.healthBar.Visible = false
             v.healthText.Visible = false
             v.distance.Visible = false
             v.viewAngle.Visible = false
             v.cham.Enabled = false
+            v.weapon.Visible = false
         end
     end
 end)
@@ -299,7 +336,7 @@ end)
 esp.Unload = function()
     ESP_Loop:Disconnect()
     ESP_Loop = nil
-    
+
     for i,v in pairs(esp.players) do
         for i2, v2 in pairs(v) do
             if v2 == "cham" then
