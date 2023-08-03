@@ -140,19 +140,16 @@ end)
 local ESP_Loop
 ESP_Loop = rs.RenderStepped:Connect(function()
     for i,v in pairs(esp.players) do
-        if i.Character and i.Character:FindFirstChild("Humanoid") and i.Character:FindFirstChild("HumanoidRootPart") and i.Character:FindFirstChild("Head") and i.Character:FindFirstChild("Humanoid").Health > 0 and (esp.maxdist == 0 or (i.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude < esp.maxdist) then
+        if i.Character and i.Character:FindFirstChild("Humanoid") and i.Character:FindFirstChild("HumanoidRootPart") and i.Character:FindFirstChild("Head") and i.Character:FindFirstChild("Humanoid").Health > 0 and (esp.maxdist == 0 or (i.Character:FindFirstChild("HumanoidRootPart").Position - plr.Character.HumanoidRootPart.Position).Magnitude < esp.maxdist) then
             local hum = i.Character.Humanoid
             local hrp = i.Character.HumanoidRootPart
             local head = i.Character.Head
-
             local Vector, onScreen = camera:WorldToViewportPoint(i.Character.HumanoidRootPart.Position)
-
             local Size = (camera:WorldToViewportPoint(hrp.Position - Vector3new(0, 3, 0)).Y - camera:WorldToViewportPoint(hrp.Position + Vector3new(0, 2.6, 0)).Y) / 2
             local BoxSize = Vector2new(mathfloor(Size * 1.5), mathfloor(Size * 1.9))
             local BoxPos = Vector2new(mathfloor(Vector.X - Size * 1.5 / 2), mathfloor(Vector.Y - Size * 1.6 / 2))
-
             local BottomOffset = BoxSize.Y + BoxPos.Y + 1
-
+            
             if onScreen and esp.settings_chams.enabled then
                 v.cham.Adornee = i.Character
                 v.cham.Enabled = esp.settings_chams.enabled
